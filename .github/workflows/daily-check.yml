@@ -1,0 +1,47 @@
+name: Daily WRAL grammar check
+
+on:
+  schedule:
+    - cron: "0 11 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  daily-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Restore seen articles cache
+        uses: actions/cache@v4
+        with:
+          path: seen_articles.json
+          key: seen-articles-${{ github.repository }}-${{ github.ref_name }}
+          restore-keys: |
+            seen-articles-${{ github.repository }}-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run WRAL grammar checker
+        env:
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        run: python wral_grammar_checker.py
