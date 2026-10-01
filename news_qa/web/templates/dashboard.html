@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% import "partials/_macros.html" as ui with context %}
+{% block title %}Desk — News QA{% endblock %}
+
+{% block main %}
+<div class="wide">
+
+  {% if hero %}
+    <div class="galley">
+      <p class="eyebrow">Newest unresolved error · {{ hero.source_name }}</p>
+      {% if hero_is_duplicate %}
+        <div class="dupe">{% for para in hero_pair %}<p>{{ para }}</p>{% endfor %}</div>
+      {% else %}
+        <p class="galley-quote">{{ hero_excerpt.before }}<mark class="mark">{{ hero_excerpt.match }}</mark>{{ hero_excerpt.after }}</p>
+      {% endif %}
+      <p style="margin:0 0 .2rem;font-weight:600">{{ hero.message }}</p>
+      <div class="galley-meta">
+        <a href="/articles/{{ hero.article_id }}">{{ hero.title or hero.url }}</a>
+        <span class="rule-id">{{ hero.rule_id }}</span>
+        <span>found {{ hero.created_at | ago }}</span>
+        <span style="flex:1"></span>
+        <a class="btn" href="/issues/{{ hero.id }}">Review it →</a>
+      </div>
+    </div>
+  {% else %}
+    <div class="empty" style="margin-bottom:2.5rem">
+      <strong>Nothing is marked.</strong>
+      <p>No open errors across {{ sources | length }} source{{ '' if sources | length == 1 else 's' }}.</p>
+      <p>Scan a feed below to look for more.</p>
+    </div>
+  {% endif %}
+
+  <div class="cards">
+    {% for source in sources %}
+      <div class="card">
+        <div class="card-head">
+          <h2><a href="/sources/{{ source.key }}" style="text-decoration:none">{{ source.name }}</a></h2>
+          {% if not source.active %}<span class="tag">paused</span>{% endif %}
+        </div>
+        <p class="card-sub">
+          {{ source.homepage | domain }} · {{ source.articles }} article{{ '' if source.articles == 1 else 's' }}
+          · last scan {{ source.last_scan_at | ago }}
+          {% if source.last_scan_status == 'error' %}<span class="tag tag-error">failed</span>{% endif %}
+        </p>
+        <div class="tally">
+          <div class="is-error"><b>{{ source.open_errors }}</b><span>Open errors</span></div>
+          <div><b>{{ source.open_issues - source.open_errors }}</b><span>Style</span></div>
+          <div class="is-stet"><b>{{ source.dismissed_issues }}</b><span>Stet</span></div>
+          <div class="is-fixed"><b>{{ source.resolved_issues }}</b><span>Fixed</span></div>
+        </div>
+        {{ ui.trigger_form(source.key) }}
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="section" style="display:grid;gap:1.25rem;grid-template-columns:repeat(auto-fit,minmax(20rem,1fr))">
+    {% include "partials/jobs.html" %}
+
+    <div class="panel">
+      <h3>Time to fix</h3>
+      {% if stats.fixed.n %}
+        <div class="tally" style="margin:.3rem 0 0">
+          <div class="is-fixed"><b>{{ stats.fixed.n }}</b><span>Corrected</span></div>
+          <div><b>{{ '%.1f' | format(stats.fixed.avg_days) }}d</b><span>Average</span></div>
+          <div><b>{{ '%.1f' | format(stats.fixed.max_days) }}d</b><span>Longest</span></div>
+        </div>
+      {% else %}
+        <p class="card-sub" style="margin:0">
+          Nothing has been corrected yet. Recheck a source after a few days and
+          this becomes the number worth bringing to an editor.
+        </p>
+      {% endif %}
+
+      {% if stats.top_rules %}
+        <h3 style="margin:1.1rem 0 .4rem">Most frequent open rules</h3>
+        <div class="table-scroll"><table>
+          <tbody>
+          {% for rule in stats.top_rules[:5] %}
+            <tr>
+              <td><a class="rule-id" href="/issues?rule_id={{ rule.rule_id }}">{{ rule.rule_id }}</a></td>
+              <td class="num">{{ rule.n }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if scans %}
+  <div class="section">
+    <h3>Recent scans</h3>
+    <div class="table-scroll"><table>
+      <thead><tr>
+        <th>Scan</th><th>Source</th><th>Started</th><th>Status</th>
+        <th class="num">Checked</th><th class="num">New</th><th class="num">Fixed</th>
+      </tr></thead>
+      <tbody>
+        {% for scan in scans %}
+        <tr>
+          <td><a href="/scans/{{ scan.id }}">#{{ scan.id }}</a> <span class="card-sub">{{ scan.kind }}</span></td>
+          <td>{{ scan.source_name or '—' }}</td>
+          <td>{{ scan.started_at | dt }}</td>
+          <td><span class="tag tag-{{ scan.status }}">{{ scan.status }}</span></td>
+          <td class="num">{{ scan.articles_checked }}</td>
+          <td class="num">{{ scan.issues_new }}</td>
+          <td class="num">{{ scan.issues_resolved }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

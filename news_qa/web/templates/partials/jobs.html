@@ -1,0 +1,36 @@
+{# Polled while anything is in flight; falls back to a slow heartbeat when idle
+   so a scan started from the terminal still shows up here. #}
+<div class="panel" id="jobs"
+     hx-get="/jobs/active" hx-trigger="every {{ 2 if jobs else 15 }}s" hx-swap="outerHTML">
+  <h3>Scan queue</h3>
+
+  {% if error %}<p class="error-note">{{ error }}</p>{% endif %}
+
+  {% if jobs %}
+    {% for job in jobs %}
+      <div class="job {% if job.state == 'running' %}job-running{% endif %}">
+        <b class="job-name">{{ job.source_name }} {{ job.kind }}</b>
+        <span class="tag tag-{{ job.state }}">{{ job.state }}</span>
+        <span class="job-progress">{{ job.progress or 'waiting for the worker' }}</span>
+      </div>
+    {% endfor %}
+    <p class="card-sub" style="margin:.7rem 0 0">
+      One scan runs at a time — they share a rate limiter and a grammar server.
+    </p>
+  {% elif not error %}
+    <p class="card-sub" style="margin:0">Nothing running.</p>
+  {% endif %}
+
+  {% if recent_jobs %}
+    <h3 style="margin:1.1rem 0 .4rem">Last runs</h3>
+    {% for job in recent_jobs %}
+      <div class="job">
+        <b class="job-name">{{ job.source_name }} {{ job.kind }}</b>
+        <span class="tag tag-{{ job.state }}">{{ job.state }}</span>
+        <span class="job-progress">{{ job.error or job.progress or '—' }}</span>
+        {% if job.scan_id %}<a href="/scans/{{ job.scan_id }}">scan #{{ job.scan_id }}</a>{% endif %}
+        <span>{{ job.finished_at | ago }}</span>
+      </div>
+    {% endfor %}
+  {% endif %}
+</div>

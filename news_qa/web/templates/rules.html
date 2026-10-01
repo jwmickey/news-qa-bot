@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Rules — News QA{% endblock %}
+
+{% block main %}
+<div class="narrow">
+  <p class="eyebrow">Detection</p>
+  <h1>Rules</h1>
+  <p class="lede">
+    Muting a rule stops future scans reporting it. Marks already recorded keep
+    their status — muting is not retroactive, and it never deletes anything.
+  </p>
+
+  <form class="filters" method="post" action="/rules/add">
+    <label for="rule_id">Mute</label>
+    <input type="text" id="rule_id" name="rule_id" required placeholder="EN_QUOTES" style="min-width:12rem">
+    <input type="text" name="note" placeholder="Why (optional)" style="min-width:14rem">
+    <button class="btn-go">Mute rule</button>
+  </form>
+
+  <h3>Muted ({{ suppressed | length }})</h3>
+  {% if suppressed %}
+    <div class="table-scroll"><table>
+      <thead><tr><th>Rule</th><th>Why</th><th class="num">Recorded</th><th></th></tr></thead>
+      <tbody>
+        {% for rule in suppressed %}
+        <tr>
+          <td class="rule-id">{{ rule.rule_id }}</td>
+          <td>{{ rule.note or '—' }}</td>
+          <td class="num">{{ rule.hits }}</td>
+          <td>
+            <form method="post" action="/rules/remove" class="inline-form">
+              <input type="hidden" name="rule_id" value="{{ rule.rule_id }}">
+              <button class="btn-quiet">Unmute</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+  {% else %}
+    <p class="card-sub">Nothing is muted.</p>
+  {% endif %}
+
+  {% if top_rules %}
+    <div class="section">
+      <h3>Most frequent open rules</h3>
+      <p class="card-sub">A rule near the top that is usually wrong is a candidate for muting.</p>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Rule</th><th class="num">Open</th><th></th></tr></thead>
+        <tbody>
+          {% for rule in top_rules %}
+          <tr>
+            <td><a class="rule-id" href="/issues?rule_id={{ rule.rule_id }}">{{ rule.rule_id }}</a></td>
+            <td class="num">{{ rule.n }}</td>
+            <td>
+              <form method="post" action="/rules/add" class="inline-form">
+                <input type="hidden" name="rule_id" value="{{ rule.rule_id }}">
+                <button class="btn-quiet">Mute</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  {% endif %}
+
+  {% if hidden %}
+    <div class="section">
+      <h3>Already suppressed at scan time</h3>
+      <p class="card-sub">
+        Counts of marks the filters hid before you ever saw them. They are kept and
+        labelled — <a href="/issues?include_hidden=true&status=all">show them</a>.
+      </p>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Filter</th><th class="num">Marks</th></tr></thead>
+        <tbody>
+          {% for row in hidden %}
+          <tr><td class="rule-id">{{ row.suppressed_reason }}</td><td class="num">{{ row.n }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

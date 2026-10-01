@@ -1,0 +1,107 @@
+{# Shared fragments. Imported "with context" so the helper callables the routes
+   pass in (excerpt, is_duplicate, suggestions, duplicate_pair) are in scope. #}
+
+{% macro status_tag(issue) %}
+  {% if issue.suppressed_reason %}
+    <span class="tag tag-hidden" title="Suppressed by the {{ issue.suppressed_reason }} filter">hidden · {{ issue.suppressed_reason }}</span>
+  {% endif %}
+  {% if issue.status == 'dismissed' %}
+    <span class="tag tag-dismissed" title="Let stand{% if issue.dismiss_reason %} — {{ issue.dismiss_reason }}{% endif %}">stet{% if issue.dismiss_reason %} · {{ issue.dismiss_reason }}{% endif %}</span>
+  {% elif issue.status == 'resolved' %}
+    <span class="tag tag-resolved">fixed</span>
+  {% endif %}
+{% endmacro %}
+
+
+{% macro excerpt_line(issue) %}
+  {% if is_duplicate(issue) %}
+    <div class="dupe">
+      {% for para in duplicate_pair(issue) %}<p>{{ para }}</p>{% endfor %}
+    </div>
+  {% else %}
+    {% set parts = excerpt(issue) %}
+    <p class="excerpt{% if issue.severity == 'style' %} excerpt-style{% endif %}">{{
+      parts.before }}<b>{{ parts.match }}</b>{{ parts.after }}</p>
+  {% endif %}
+{% endmacro %}
+
+
+{# One issue as a triage row. `id` on the wrapper is the HTMX swap target. #}
+{% macro issue_item(issue, reasons, flash=None, checkbox=True) %}
+<div class="issue" id="issue-row-{{ issue.id }}">
+  <div class="issue-check">
+    {% if checkbox %}
+      <input type="checkbox" name="issue_ids" value="{{ issue.id }}" form="bulk"
+             aria-label="Select issue {{ issue.id }}">
+    {% endif %}
+  </div>
+  <div>
+    <p class="issue-message"><a href="/issues/{{ issue.id }}">{{ issue.message }}</a></p>
+    {{ excerpt_line(issue) }}
+    <div class="issue-foot">
+      <span class="tag tag-{{ issue.severity }}">{{ issue.kind }}</span>
+      {{ status_tag(issue) }}
+      {% if issue.in_quote %}<span class="tag">in quote</span>{% endif %}
+      <span class="rule-id">{{ issue.rule_id }}</span>
+      {% set fixes = suggestions(issue, 3) %}
+      {% if fixes %}<span class="suggest">→ {% for fix in fixes %}<b>{{ fix }}</b>{% if not loop.last %}, {% endif %}{% endfor %}</span>{% endif %}
+
+      <span class="spacer" style="flex:1"></span>
+
+      {% if issue.status == 'open' %}
+        <form class="inline-form" hx-post="/issues/{{ issue.id }}/dismiss"
+              hx-target="#issue-row-{{ issue.id }}" hx-swap="outerHTML">
+          <select name="reason" aria-label="Why this is not an error">
+            {% for reason in reasons %}<option value="{{ reason }}">{{ reason.replace('-', ' ') }}</option>{% endfor %}
+          </select>
+          {% if issue.kind == 'spelling' %}
+            <label style="text-transform:none;letter-spacing:0;font-weight:500">
+              <input type="checkbox" name="add_to_dictionary" value="1"> to dictionary
+            </label>
+          {% endif %}
+          <button class="btn-stet" title="Let it stand — record this as not an error">Stet</button>
+        </form>
+      {% else %}
+        <form class="inline-form" hx-post="/issues/{{ issue.id }}/reopen"
+              hx-target="#issue-row-{{ issue.id }}" hx-swap="outerHTML">
+          <button class="btn-mark" title="Put the mark back and reopen this issue">Restore mark</button>
+        </form>
+      {% endif %}
+      {% if flash %}<span class="flash">{{ flash }}</span>{% endif %}
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+
+{% macro trigger_form(source_key, jobs_target="#jobs") %}
+<div class="inline-form">
+  <form class="inline-form" hx-post="/sources/{{ source_key }}/scan"
+        hx-target="{{ jobs_target }}" hx-swap="outerHTML">
+    <input type="number" name="limit" min="1" max="200" placeholder="limit"
+           style="width:5.5rem" aria-label="Article limit">
+    <button class="btn-go">Scan feed</button>
+  </form>
+  <form class="inline-form" hx-post="/sources/{{ source_key }}/rescan"
+        hx-target="{{ jobs_target }}" hx-swap="outerHTML">
+    <input type="number" name="since" min="1" max="365" placeholder="days"
+           style="width:5rem" aria-label="Only articles first seen within N days">
+    <button title="Re-read articles with open issues and record what was fixed">Recheck</button>
+  </form>
+</div>
+{% endmacro %}
+
+
+{% macro pager(total, offset, page_size, filters, path) %}
+{% if total > page_size %}
+<div class="pager">
+  {% if offset > 0 %}
+    <a class="btn" href="{{ path }}{{ qs(filters, offset=offset - page_size) }}">← Previous</a>
+  {% endif %}
+  <span>{{ offset + 1 }}–{{ [offset + page_size, total] | min }} of {{ total }}</span>
+  {% if offset + page_size < total %}
+    <a class="btn" href="{{ path }}{{ qs(filters, offset=offset + page_size) }}">Next →</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endmacro %}

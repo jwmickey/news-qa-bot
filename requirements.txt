@@ -1,4 +1,21 @@
-language-tool-python
-feedparser
-requests
-beautifulsoup4
+# Runtime
+beautifulsoup4==4.15.0
+feedparser==6.0.14
+jinja2==3.1.6
+language-tool-python==3.4.0
+lxml==6.1.1
+requests==2.34.2
+spacy==3.8.14
+
+# Web UI (python -m news_qa.web). Jinja2 and pydantic arrive with spacy anyway;
+# they are pinned above/here because the UI depends on them directly.
+fastapi==0.121.2
+python-multipart==0.0.20
+uvicorn==0.38.0
+
+# The spaCy English model is not on PyPI under a plain name; install it with:
+#   python -m spacy download en_core_web_sm
+# Without it the scan still runs, using the dictionary alone (noisier output).
+
+# Development
+pytest==9.1.1

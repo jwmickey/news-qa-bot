@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Compare versions — News QA{% endblock %}
+
+{% block main %}
+<div class="narrow">
+  <p class="eyebrow">{{ article.source_name }} · article #{{ article.id }}</p>
+  <h1>What changed</h1>
+  <p class="lede">{{ article.title or article.url }}</p>
+
+  <form class="filters" method="get" action="/articles/{{ article.id }}/diff">
+    <label for="d-a">From</label>
+    <select id="d-a" name="a">
+      {% for version in versions %}
+        <option value="{{ version.id }}" {% if version.id == older %}selected{% endif %}>{{ version.fetched_at | dt }}</option>
+      {% endfor %}
+    </select>
+    <label for="d-b">To</label>
+    <select id="d-b" name="b">
+      {% for version in versions %}
+        <option value="{{ version.id }}" {% if version.id == newer %}selected{% endif %}>{{ version.fetched_at | dt }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn-go">Compare</button>
+    <a class="btn btn-quiet" href="/articles/{{ article.id }}">Back to the article</a>
+  </form>
+
+  {% if diff %}
+    <div class="diff">
+      {% for line in diff %}
+        {% if line.startswith('@@') %}<div class="hunk">{{ line }}</div>
+        {% elif line.startswith('+') %}<div class="add">{{ line }}</div>
+        {% elif line.startswith('-') %}<div class="del">{{ line }}</div>
+        {% else %}<div>{{ line }}</div>{% endif %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty">
+      <strong>These two versions read the same.</strong>
+      <p>The paragraph text is identical; only the fetch time differs.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

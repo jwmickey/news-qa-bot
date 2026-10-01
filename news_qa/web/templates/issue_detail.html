@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% import "partials/_macros.html" as ui with context %}
+{% block title %}{{ issue.message }} — News QA{% endblock %}
+
+{% block main %}
+<div class="wide">
+  <p class="eyebrow">
+    {{ issue.source_name }} · <a href="/articles/{{ issue.article_id }}">article #{{ issue.article_id }}</a>
+    {# +1 to match the numbers printed down the left of the proof. #}
+    · paragraph {{ issue.para_index + 1 if issue.para_index is not none else '—' }}
+  </p>
+  <h1>{{ issue.message }}</h1>
+  <p class="lede">
+    <a href="{{ issue.url }}" rel="noopener noreferrer" target="_blank">{{ issue.title or issue.url }} ↗</a>
+    {% if issue.byline %} · by {{ issue.byline }}{% endif %}
+  </p>
+
+  <div class="proof">
+    <div class="proof-body">
+      {% if this_is_duplicate %}
+        <p class="eyebrow" style="padding-left:0">The two paragraphs reported as repeated</p>
+        <div class="dupe">{% for para in this_pair %}<p>{{ para }}</p>{% endfor %}</div>
+        <hr style="border:none;border-top:1px solid var(--rule);margin:1.5rem 0">
+      {% endif %}
+
+      {% if paragraphs %}
+        {% for para in paragraphs %}
+          <p data-index="{{ '%02d' | format(para.index + 1) }}"
+             {% if para.issues %}class="has-mark"{% endif %}>{{ para.html | safe }}</p>
+        {% endfor %}
+      {% else %}
+        <p>No stored text for this version of the article.</p>
+      {% endif %}
+    </div>
+
+    <aside class="proof-margin">
+      <div class="card">
+        <p class="eyebrow" style="margin-bottom:.5rem">This mark</p>
+        <div class="issue-foot" style="margin-bottom:.6rem">
+          <span class="tag tag-{{ issue.severity }}">{{ issue.kind }}</span>
+          {{ ui.status_tag(issue) }}
+          {% if issue.in_quote %}<span class="tag" title="Inside quoted speech — an editor may not be free to change it">in quote</span>{% endif %}
+        </div>
+
+        {% if not this_is_duplicate %}
+          <p class="excerpt{% if issue.severity == 'style' %} excerpt-style{% endif %}">{{
+            this_excerpt.before }}<b>{{ this_excerpt.match }}</b>{{ this_excerpt.after }}</p>
+        {% endif %}
+
+        {% if this_suggestions %}
+          <p class="suggest" style="margin:.2rem 0 .8rem">Suggested: {% for fix in this_suggestions %}<b>{{ fix }}</b>{% if not loop.last %}, {% endif %}{% endfor %}</p>
+        {% endif %}
+
+        {% if issue.status == 'open' %}
+          <form method="post" action="/issues/{{ issue.id }}/dismiss"
+                style="display:grid;gap:.5rem">
+            <select name="reason" aria-label="Why this is not an error">
+              {% for reason in reasons %}<option value="{{ reason }}">{{ reason.replace('-', ' ') }}</option>{% endfor %}
+            </select>
+            <input type="text" name="note" placeholder="Note (optional)">
+            {% if issue.kind == 'spelling' %}
+              <label style="font-size:.8rem">
+                <input type="checkbox" name="add_to_dictionary" value="1" checked>
+                Also add “{{ issue.matched_text }}” to the dictionary
+              </label>
+            {% endif %}
+            <button class="btn-stet" title="Let it stand — record this as not an error">Stet — let it stand</button>
+          </form>
+        {% else %}
+          <form method="post" action="/issues/{{ issue.id }}/reopen">
+            <button class="btn-mark">Restore mark</button>
+          </form>
+        {% endif %}
+      </div>
+
+      <div class="panel">
+        <h3>Record</h3>
+        <table>
+          <tbody>
+            <tr><td>Rule</td><td><a class="rule-id" href="/issues?rule_id={{ issue.rule_id }}">{{ issue.rule_id }}</a></td></tr>
+            <tr><td>First seen</td><td>{{ issue.created_at | dt }}</td></tr>
+            <tr><td>Last seen</td><td>scan <a href="/scans/{{ issue.last_scan_id }}">#{{ issue.last_scan_id }}</a></td></tr>
+            {% if issue.resolved_at %}<tr><td>Fixed</td><td>{{ issue.resolved_at | dt }}</td></tr>{% endif %}
+            <tr><td>Identity</td><td class="rule-id" title="Content hash — survives edits above it">{{ issue.fingerprint[:12] }}…</td></tr>
+          </tbody>
+        </table>
+
+        {% if dismissals %}
+          <h3 style="margin:1rem 0 .4rem">Judgements</h3>
+          {% for record in dismissals %}
+            <div class="job">
+              <b>{{ record.reason }}</b>
+              <span class="job-progress">{{ record.note or '' }}</span>
+              <span>{{ record.created_at | ago }}</span>
+              {% if record.revoked_at %}<span class="tag">revoked {{ record.revoked_at | ago }}</span>{% endif %}
+            </div>
+          {% endfor %}
+        {% endif %}
+      </div>
+
+      {% if siblings %}
+        <div class="panel">
+          <h3>Other marks here ({{ siblings | length }})</h3>
+          {% for other in siblings[:12] %}
+            <div class="job">
+              <a href="/issues/{{ other.id }}" class="job-progress">{{ other.matched_text or other.message }}</a>
+              <span class="tag tag-{{ other.severity }}">{{ other.kind }}</span>
+            </div>
+          {% endfor %}
+          <p style="margin:.7rem 0 0"><a href="/articles/{{ issue.article_id }}">See the whole article →</a></p>
+        </div>
+      {% endif %}
+    </aside>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Daily local scan via launchd.
+
+  Install:
+    cp scripts/com.jody.newsqa.plist ~/Library/LaunchAgents/
+    # edit the paths below to match your checkout, then:
+    launchctl load ~/Library/LaunchAgents/com.jody.newsqa.plist
+
+  Run it once by hand:
+    launchctl start com.jody.newsqa
+
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.jody.newsqa.plist
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.jody.newsqa</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/jody/code/news-qa-bot/scripts/daily-scan.sh</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/jody/code/news-qa-bot</string>
+
+    <!-- 07:00 local time, daily. -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>7</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <!-- Catch up after the machine was asleep at the scheduled time. -->
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/jody/code/news-qa-bot/data/scan.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/jody/code/news-qa-bot/data/scan.err.log</string>
+</dict>
+</plist>

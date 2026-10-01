@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% import "partials/_macros.html" as ui with context %}
+{% block title %}Marks — News QA{% endblock %}
+
+{% block main %}
+<div class="wide">
+  <p class="eyebrow">Triage</p>
+  <h1>Marks</h1>
+  <p class="lede">
+    Stet lets an issue stand as written — it stays on the record in blue pencil
+    rather than disappearing, so you can always see what was waved through and why.
+  </p>
+
+  <form class="filters" method="get" action="/issues">
+    <label for="f-source">Source</label>
+    <select id="f-source" name="source">
+      <option value="">All</option>
+      {% for source in sources %}
+        <option value="{{ source.key }}" {% if filters.source == source.key %}selected{% endif %}>{{ source.name }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="f-status">Status</label>
+    <select id="f-status" name="status">
+      <option value="all" {% if not filters.status %}selected{% endif %}>All</option>
+      {% for value in statuses %}
+        <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ 'stet' if value == 'dismissed' else ('fixed' if value == 'resolved' else value) }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="f-sev">Severity</label>
+    <select id="f-sev" name="severity">
+      <option value="all">All</option>
+      {% for value in severities %}
+        <option value="{{ value }}" {% if filters.severity == value %}selected{% endif %}>{{ value }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="f-kind">Kind</label>
+    <select id="f-kind" name="kind">
+      <option value="all">All</option>
+      {% for value in kinds %}
+        <option value="{{ value }}" {% if filters.kind == value %}selected{% endif %}>{{ value }}</option>
+      {% endfor %}
+    </select>
+
+    <input type="search" name="q" value="{{ filters.q or '' }}" placeholder="Search text or headline">
+
+    <label style="text-transform:none;letter-spacing:0;font-weight:500">
+      <input type="checkbox" name="include_hidden" value="true" {% if filters.include_hidden %}checked{% endif %}>
+      Show suppressed
+    </label>
+
+    {% if filters.rule_id %}<input type="hidden" name="rule_id" value="{{ filters.rule_id }}">{% endif %}
+    <button class="btn-go">Apply</button>
+    <a class="btn btn-quiet" href="/issues">Reset</a>
+  </form>
+
+  {% if filters.rule_id %}
+    <p class="card-sub">Filtered to rule <span class="rule-id">{{ filters.rule_id }}</span>.</p>
+  {% endif %}
+
+  {% if grouped %}
+    <form id="bulk" method="post" action="/issues/bulk"></form>
+
+    {% for article in grouped %}
+      <section class="article-group">
+        <header>
+          <h2><a href="/articles/{{ article.article_id }}">{{ article.title }}</a></h2>
+          <div class="article-meta">
+            <span>{{ article.source_name }}</span>
+            {% if article.byline %}<span>by {{ article.byline }}</span>{% endif %}
+            <a href="{{ article.url }}" rel="noopener noreferrer" target="_blank">read on {{ article.url | domain }} ↗</a>
+            <span>{{ article.issues | length }} shown</span>
+          </div>
+        </header>
+        {% for issue in article.issues %}{{ ui.issue_item(issue, reasons) }}{% endfor %}
+      </section>
+    {% endfor %}
+
+    <div class="filters" style="margin-top:1.5rem">
+      <label>With selected</label>
+      <select name="action" form="bulk">
+        <option value="dismiss">Stet</option>
+        <option value="reopen">Restore mark</option>
+      </select>
+      <select name="reason" form="bulk" aria-label="Reason">
+        {% for reason in reasons %}<option value="{{ reason }}">{{ reason.replace('-', ' ') }}</option>{% endfor %}
+      </select>
+      <label style="text-transform:none;letter-spacing:0;font-weight:500">
+        <input type="checkbox" name="add_to_dictionary" value="1" form="bulk"> add spellings to dictionary
+      </label>
+      <button class="btn-go" form="bulk">Apply to selected</button>
+    </div>
+
+    {{ ui.pager(total, offset, page_size, filters, '/issues') }}
+  {% else %}
+    <div class="empty">
+      <strong>No marks match these filters.</strong>
+      <p>Widen the filters, or scan a source to look for new ones.</p>
+      <p><a class="btn" href="/">Back to the desk</a></p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

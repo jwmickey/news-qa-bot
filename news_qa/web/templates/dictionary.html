@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Dictionary — News QA{% endblock %}
+
+{% block main %}
+<div class="narrow">
+  <p class="eyebrow">Allowlist</p>
+  <h1>Dictionary</h1>
+  <p class="lede">
+    Words here are never reported as misspellings. It catches what the entity
+    model misses — mastheads, brands, and local place names that no general
+    dictionary carries. Changes apply to the next scan.
+  </p>
+
+  <form class="filters" method="post" action="/dictionary/add">
+    <label for="term">Add</label>
+    <input type="text" id="term" name="term" required
+           placeholder="Fuquay-Varina, GreenWise" style="min-width:18rem">
+    <button class="btn-go">Add terms</button>
+    <span class="card-sub">Separate with commas or newlines.</span>
+  </form>
+
+  <form class="filters" method="get" action="/dictionary">
+    <label for="q">Find</label>
+    <input type="search" id="q" name="q" value="{{ q }}" placeholder="Search terms">
+    <button>Search</button>
+    {% if q %}<a class="btn btn-quiet" href="/dictionary">Clear</a>{% endif %}
+  </form>
+
+  {% if terms %}
+    <p class="card-sub">{{ terms | length }} term{{ '' if terms | length == 1 else 's' }}</p>
+    <div class="table-scroll"><table>
+      <thead><tr><th>Term</th><th>Added</th><th>Origin</th><th></th></tr></thead>
+      <tbody>
+        {% for term in terms %}
+        <tr>
+          <td>{{ term.term }}</td>
+          <td>{{ term.added_at | dt('%Y-%m-%d') }}</td>
+          <td>
+            <span class="card-sub">{{ term.note or '—' }}</span>
+            {% if term.added_from_issue_id %}
+              <a class="rule-id" href="/issues/{{ term.added_from_issue_id }}">from issue #{{ term.added_from_issue_id }}</a>
+            {% endif %}
+          </td>
+          <td>
+            <form method="post" action="/dictionary/remove" class="inline-form">
+              <input type="hidden" name="term" value="{{ term.term }}">
+              <button class="btn-quiet" title="Stop allowing this spelling">Remove</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+  {% else %}
+    <div class="empty">
+      <strong>{{ 'No terms match that search.' if q else 'The dictionary is empty.' }}</strong>
+      <p>Add a term above, or stet a spelling issue with “to dictionary” ticked.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

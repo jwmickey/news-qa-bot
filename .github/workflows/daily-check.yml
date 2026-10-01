@@ -1,15 +1,27 @@
-name: Daily WRAL grammar check
+# Manual smoke test only.
+#
+# The scheduled run moved to the local machine when this project gained a
+# SQLite database: scan state now lives in data/news_qa.db, which cannot
+# survive between Actions runs. (The previous actions/cache step could not
+# either -- its key never rotated, so seen_articles.json froze after the first
+# successful run and every article was re-checked forever.)
+#
+# For the daily run see scripts/com.jody.newsqa.plist and the README.
+name: WRAL check (manual)
 
 on:
-  schedule:
-    - cron: "0 11 * * *"
   workflow_dispatch:
+    inputs:
+      limit:
+        description: "Max articles to check"
+        required: false
+        default: "10"
 
 permissions:
   contents: read
 
 jobs:
-  daily-check:
+  check:
     runs-on: ubuntu-latest
 
     steps:
@@ -28,20 +40,19 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Restore seen articles cache
-        uses: actions/cache@v4
-        with:
-          path: seen_articles.json
-          key: seen-articles-${{ github.repository }}-${{ github.ref_name }}
-          restore-keys: |
-            seen-articles-${{ github.repository }}-
-
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
+          python -m spacy download en_core_web_sm
 
-      - name: Run WRAL grammar checker
+      - name: Run tests
+        run: python -m pytest tests/ -q
+
+      - name: Run a scan
         env:
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-        run: python wral_grammar_checker.py
+        run: |
+          python -m news_qa scan --limit "${{ inputs.limit }}"
+          python -m news_qa report

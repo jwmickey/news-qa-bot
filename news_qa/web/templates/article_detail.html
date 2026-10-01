@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ article.title or article.url }} — News QA{% endblock %}
+
+{% block main %}
+<div class="wide">
+  <p class="eyebrow">{{ article.source_name }} · article #{{ article.id }}</p>
+  <h1>{{ article.title or article.url }}</h1>
+  <p class="lede">
+    {% if article.byline %}by {{ article.byline }} · {% endif %}
+    <a href="{{ article.url }}" rel="noopener noreferrer" target="_blank">read on {{ article.url | domain }} ↗</a>
+    · {{ open_count }} open mark{{ '' if open_count == 1 else 's' }}
+    · last scanned {{ article.last_scanned_at | ago }}
+  </p>
+
+  {% if article.extraction_status == 'failed' %}
+    <p class="error-note">
+      Extraction failed: {{ article.extraction_note or 'unknown reason' }}.
+      Nothing was resolved from this read — a failed extraction never counts as a fix.
+    </p>
+  {% endif %}
+
+  <div class="proof">
+    <div class="proof-body">
+      {% for para in paragraphs %}
+        <p data-index="{{ '%02d' | format(para.index + 1) }}"
+           {% if para.issues %}class="has-mark"{% endif %}>{{ para.html | safe }}</p>
+      {% else %}
+        <p>No stored text for this version.</p>
+      {% endfor %}
+    </div>
+
+    <aside class="proof-margin">
+      <div class="panel">
+        <h3>Key</h3>
+        <div class="key" style="display:grid;gap:.4rem">
+          <span><mark class="mark">error</mark> open error</span>
+          <span><mark class="mark mark-style">style</mark> matter of style</span>
+          <span><mark class="mark mark-dismissed">stet</mark> let stand</span>
+          <span><mark class="mark mark-resolved">fixed</mark> corrected since</span>
+        </div>
+      </div>
+
+      {% if duplicates %}
+        <div class="panel">
+          <h3>Repeated paragraphs</h3>
+          {% for issue in duplicates %}
+            <div class="dupe">{% for para in duplicate_pair(issue) %}<p>{{ para }}</p>{% endfor %}</div>
+            <p style="margin:.3rem 0 1rem"><a href="/issues/{{ issue.id }}">Review →</a></p>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="panel">
+        <h3>Marks ({{ issues | length }})</h3>
+        {% for issue in issues %}
+          <div class="job">
+            <a href="/issues/{{ issue.id }}#issue-{{ issue.id }}" class="job-progress">{{ issue.matched_text or issue.message }}</a>
+            <span class="tag tag-{{ issue.status if issue.status != 'open' else issue.severity }}">{{ 'stet' if issue.status == 'dismissed' else ('fixed' if issue.status == 'resolved' else issue.kind) }}</span>
+          </div>
+        {% else %}
+          <p class="card-sub" style="margin:0">Clean.</p>
+        {% endfor %}
+      </div>
+
+      <div class="panel">
+        <h3>Versions ({{ versions | length }})</h3>
+        {% for version in versions %}
+          <div class="job">
+            <a href="/articles/{{ article.id }}?version={{ version.id }}"
+               class="job-progress">{{ version.fetched_at | dt }}{% if version.id == version_id %} — showing{% endif %}</a>
+            <span class="card-sub">{{ version.paragraph_count }}¶</span>
+          </div>
+        {% endfor %}
+        {% if versions | length > 1 %}
+          <p style="margin:.7rem 0 0"><a class="btn" href="/articles/{{ article.id }}/diff">Compare versions</a></p>
+        {% endif %}
+      </div>
+    </aside>
+  </div>
+</div>
+{% endblock %}

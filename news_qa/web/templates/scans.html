@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Scans — News QA{% endblock %}
+
+{% block main %}
+<div class="wide">
+  <p class="eyebrow">History</p>
+  <h1>Scans</h1>
+  <p class="lede">
+    A <em>scan</em> reads new articles from a feed. A <em>recheck</em> re-reads articles
+    that still have open marks and records what was corrected.
+  </p>
+
+  <form class="filters" method="get" action="/scans">
+    <label for="s-source">Source</label>
+    <select id="s-source" name="source">
+      <option value="">All</option>
+      {% for source in sources %}
+        <option value="{{ source.key }}" {% if filters.source == source.key %}selected{% endif %}>{{ source.name }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn-go">Apply</button>
+  </form>
+
+  {% if scans %}
+    <div class="table-scroll"><table>
+      <thead><tr>
+        <th>Scan</th><th>Source</th><th>Started</th><th>Took</th><th>Status</th>
+        <th class="num">Seen</th><th class="num">Checked</th><th class="num">Unchanged</th>
+        <th class="num">Failed</th><th class="num">New</th><th class="num">Fixed</th>
+      </tr></thead>
+      <tbody>
+        {% for scan in scans %}
+        <tr>
+          <td><a href="/scans/{{ scan.id }}">#{{ scan.id }}</a> <span class="card-sub">{{ scan.kind }}</span></td>
+          <td>{{ scan.source_name or '—' }}</td>
+          <td>{{ scan.started_at | dt }}</td>
+          <td>{{ duration(scan.started_at, scan.finished_at) }}</td>
+          <td>
+            <span class="tag tag-{{ scan.status }}">{{ scan.status }}</span>
+            {% if scan.note %}<span class="card-sub" title="{{ scan.note }}">note</span>{% endif %}
+          </td>
+          <td class="num">{{ scan.articles_seen }}</td>
+          <td class="num">{{ scan.articles_checked }}</td>
+          <td class="num">{{ scan.articles_unchanged }}</td>
+          <td class="num">{{ scan.articles_failed }}</td>
+          <td class="num">{{ scan.issues_new }}</td>
+          <td class="num">{{ scan.issues_resolved }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+
+    <div class="pager">
+      {% if filters.offset > 0 %}
+        <a class="btn" href="/scans{{ qs(filters, offset=filters.offset - filters.limit) }}">← Newer</a>
+      {% endif %}
+      {% if scans | length == filters.limit %}
+        <a class="btn" href="/scans{{ qs(filters, offset=filters.offset + filters.limit) }}">Older →</a>
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="empty">
+      <strong>No scans recorded yet.</strong>
+      <p>Start one from a source card, or run <span class="rule-id">python -m news_qa scan</span>.</p>
+      <p><a class="btn" href="/sources">Go to sources</a></p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

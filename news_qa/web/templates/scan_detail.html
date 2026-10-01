@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% import "partials/_macros.html" as ui with context %}
+{% block title %}Scan #{{ scan.id }} — News QA{% endblock %}
+
+{% block main %}
+<div class="wide">
+  <p class="eyebrow">{{ scan.source_name or 'unknown source' }} · {{ scan.kind }}</p>
+  <h1>Scan #{{ scan.id }}</h1>
+  <p class="lede">
+    {{ scan.started_at | dt }} · took {{ duration(scan.started_at, scan.finished_at) }}
+    · <span class="tag tag-{{ scan.status }}">{{ scan.status }}</span>
+  </p>
+
+  {% if scan.note %}<p class="error-note">{{ scan.note }}</p>{% endif %}
+
+  <div class="tally">
+    <div><b>{{ scan.articles_seen }}</b><span>Seen</span></div>
+    <div><b>{{ scan.articles_checked }}</b><span>Checked</span></div>
+    <div><b>{{ scan.articles_unchanged }}</b><span>Unchanged</span></div>
+    <div><b>{{ scan.articles_failed }}</b><span>Failed</span></div>
+    <div class="is-error"><b>{{ scan.issues_new }}</b><span>New marks</span></div>
+    <div class="is-fixed"><b>{{ scan.issues_resolved }}</b><span>Fixed</span></div>
+  </div>
+
+  {% if articles %}
+    <div class="section">
+      <h3>Articles read</h3>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Article</th><th>Extraction</th><th class="num">Open marks</th></tr></thead>
+        <tbody>
+          {% for article in articles %}
+          <tr>
+            <td><a href="/articles/{{ article.id }}">{{ article.title or article.url }}</a></td>
+            <td>
+              {% if article.extraction_status == 'failed' %}
+                <span class="tag tag-error">failed</span>
+                <span class="card-sub">{{ article.extraction_note }}</span>
+              {% else %}<span class="card-sub">{{ article.extraction_status }}</span>{% endif %}
+            </td>
+            <td class="num">{{ article.open_issues }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  {% endif %}
+
+  <div class="section">
+    <h3>Marks still open from this scan</h3>
+    {% if grouped %}
+      {% for article in grouped %}
+        <section class="article-group">
+          <header>
+            <h2><a href="/articles/{{ article.article_id }}">{{ article.title }}</a></h2>
+            <div class="article-meta">
+              {% if article.byline %}<span>by {{ article.byline }}</span>{% endif %}
+              <a href="{{ article.url }}" rel="noopener noreferrer" target="_blank">read on {{ article.url | domain }} ↗</a>
+            </div>
+          </header>
+          {% for issue in article.issues %}{{ ui.issue_item(issue, reasons, checkbox=False) }}{% endfor %}
+        </section>
+      {% endfor %}
+    {% else %}
+      <div class="empty">
+        <strong>Nothing open from this scan.</strong>
+        <p>Either it found nothing, or everything it found has since been stetted or fixed.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

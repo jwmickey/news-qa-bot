@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% import "partials/_macros.html" as ui with context %}
+{% block title %}Sources — News QA{% endblock %}
+
+{% block main %}
+<div class="wide">
+  <p class="eyebrow">Watched publications</p>
+  <h1>Sources</h1>
+  <p class="lede">
+    Sources are defined in <span class="rule-id">news_qa/sources.py</span> and mirrored here
+    on startup. Adding one is a code change — a row edited in the browser would be
+    overwritten on the next run.
+  </p>
+
+  <div class="cards">
+    {% for source in sources %}
+      <div class="card">
+        <div class="card-head">
+          <h2><a href="/sources/{{ source.key }}" style="text-decoration:none">{{ source.name }}</a></h2>
+          <span class="tag">{{ source.key }}</span>
+        </div>
+        <p class="card-sub">
+          <a href="{{ source.feed_url }}" rel="noopener noreferrer" target="_blank">feed ↗</a>
+          · {{ source.articles }} article{{ '' if source.articles == 1 else 's' }}
+          · last scan {{ source.last_scan_at | ago }}
+        </p>
+        <div class="tally">
+          <div class="is-error"><b>{{ source.open_errors }}</b><span>Open errors</span></div>
+          <div class="is-stet"><b>{{ source.dismissed_issues }}</b><span>Stet</span></div>
+          <div class="is-fixed"><b>{{ source.resolved_issues }}</b><span>Fixed</span></div>
+        </div>
+        {{ ui.trigger_form(source.key) }}
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="section">{% include "partials/jobs.html" %}</div>
+</div>
+{% endblock %}
