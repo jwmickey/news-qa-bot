@@ -1,4 +1,4 @@
-language-tool-python
+language-tool-python>=3.0.0,<4.0.0
 feedparser
 requests
 beautifulsoup4
