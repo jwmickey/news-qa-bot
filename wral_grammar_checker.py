@@ -137,9 +137,20 @@ def extract_article_text(url):
     )
 
 
+def get_rule_id(match):
+    """Return the rule ID from a Match object across language_tool_python versions."""
+    rule_id = getattr(match, "rule_id", None) or getattr(match, "ruleId", None)
+    if rule_id is not None:
+        return rule_id
+    rule = getattr(match, "rule", None)
+    if isinstance(rule, dict):
+        return rule.get("id")
+    return getattr(rule, "id", None)
+
+
 def check_text(tool, text):
     matches = tool.check(text)
-    return [match for match in matches if match.ruleId not in IGNORE_RULE_IDS]
+    return [match for match in matches if get_rule_id(match) not in IGNORE_RULE_IDS]
 
 
 def build_report(results):
@@ -179,7 +190,8 @@ def build_report(results):
             lines.append(f'     [{pos_two}] "{preview_two}"')
 
         for issue in item["issues"][:10]:
-            lines.append(f"   - [{issue.ruleId}] {issue.message}")
+            rule_id = get_rule_id(issue) or "UNKNOWN_RULE"
+            lines.append(f"   - [{rule_id}] {issue.message}")
             lines.append(f"     ...{issue.context.strip()}...")
 
     return "\n".join(lines)
